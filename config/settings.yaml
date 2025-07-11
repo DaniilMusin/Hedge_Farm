@@ -1,0 +1,11 @@
+
+fee_pct:
+  futures: 0.008
+  put: 0.010
+  forward: 0.012
+basis_discount: 1600           # rub / t
+forward_delta_pct: 0.015
+go_pct: 0.10
+risk:
+  capital_reserve: 50000000
+  alpha_capital: 0.1
