@@ -6,15 +6,45 @@ from pathlib import Path
 from typing import Dict, Any
 
 
+def get_default_config() -> Dict[str, Any]:
+    """Возвращает конфигурацию по умолчанию."""
+    return {
+        "fee_pct": {
+            "futures": 0.008,
+            "put": 0.010,
+            "forward": 0.012
+        },
+        "basis_discount": 1600,
+        "forward_delta_pct": 0.015,
+        "go_pct": 0.10,
+        "risk": {
+            "capital_reserve": 50000000,
+            "alpha_capital": 0.1
+        }
+    }
+
+
 def load_cfg() -> Dict[str, Any]:
-    """Загружает конфигурацию из settings.yaml."""
+    """Загружает конфигурацию из settings.yaml с fallback на default."""
     config_path = Path(__file__).parent.parent / "config" / "settings.yaml"
     
-    if not config_path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    try:
+        if not config_path.exists():
+            print(f"Warning: Configuration file not found: {config_path}, using defaults")
+            return get_default_config()
+        
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            
+        if not config:
+            print("Warning: Empty configuration file, using defaults")
+            return get_default_config()
+            
+        return config
+        
+    except (yaml.YAMLError, OSError, IOError) as e:
+        print(f"Warning: Error loading configuration file: {e}, using defaults")
+        return get_default_config()
 
 
 def get_moex_token() -> str:
