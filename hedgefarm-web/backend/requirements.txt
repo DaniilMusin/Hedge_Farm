@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-jose
+pydantic>=2
+python-multipart
+PyYAML
+# ← подключаем ваш алгоритм как пакет editable + git
+-e git+https://github.com/DaniilMusin/Hedge_Farm.git#egg=hedgefarm-pricer
