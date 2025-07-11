@@ -53,7 +53,18 @@ class TestAPI:
         # Мокаем рыночные данные
         mock_market_data = Mock()
         mock_market_data.futures_quote.price = 16500.0
-        mock_market_data.put_options = []
+        
+        # Создаем мок PUT опцион
+        from hedgefarm.models import OptionQuote
+        mock_put_option = OptionQuote(
+            symbol="WHEAT_16000_P",
+            strike=16000.0,
+            premium=300.0,
+            option_type="P",
+            expiry="2024-06-15",
+            implied_vol=0.25
+        )
+        mock_market_data.put_options = [mock_put_option]
         mock_market_data.volatility = 0.25
         mock_market_data.usd_rate = 95.0
         
@@ -102,7 +113,18 @@ class TestAPI:
         # Мокаем рыночные данные
         mock_market_data = Mock()
         mock_market_data.futures_quote.price = 16500.0
-        mock_market_data.put_options = []
+        
+        # Создаем мок PUT опцион
+        from hedgefarm.models import OptionQuote
+        mock_put_option = OptionQuote(
+            symbol="WHEAT_16000_P",
+            strike=16000.0,
+            premium=300.0,
+            option_type="P",
+            expiry="2024-06-15",
+            implied_vol=0.25
+        )
+        mock_market_data.put_options = [mock_put_option]
         mock_market_data.volatility = 0.25
         mock_market_data.usd_rate = 95.0
         
@@ -129,7 +151,18 @@ class TestAPI:
         with patch('hedgefarm.service.moex_client') as mock_moex_client:
             mock_market_data = Mock()
             mock_market_data.futures_quote.price = 16500.0
-            mock_market_data.put_options = []
+            
+            # Создаем мок PUT опцион
+            from hedgefarm.models import OptionQuote
+            mock_put_option = OptionQuote(
+                symbol="WHEAT_16000_P",
+                strike=16000.0,
+                premium=300.0,
+                option_type="P",
+                expiry="2024-06-15",
+                implied_vol=0.25
+            )
+            mock_market_data.put_options = [mock_put_option]
             mock_market_data.volatility = 0.25
             mock_market_data.usd_rate = 95.0
             
