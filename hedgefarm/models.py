@@ -20,7 +20,7 @@ class QuoteOut(BaseModel):
     floor_futures_rubkg: float = Field(description="Цена пола при хедже фьючерсом, руб/кг")
     floor_put_rubkg: float = Field(description="Цена пола при хедже PUT опционом, руб/кг")
     floor_forward_rubkg: float = Field(description="Цена пола при форвардном хедже, руб/кг")
-    recommended: Literal["futures", "put", "forward"] = Field(description="Рекомендуемый инструмент")
+    recommended: Literal["futures", "put", "put_ladder", "forward"] = Field(description="Рекомендуемый инструмент")
     calculated_at: datetime = Field(default_factory=datetime.utcnow, description="Время расчета")
 
 
