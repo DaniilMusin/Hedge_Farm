@@ -70,17 +70,18 @@ class TestAggregator:
         """Тест выбора наилучшей стратегии."""
         mgp_futures = 15.8
         mgp_put = 15.5
+        mgp_put_ladder = 15.6
         mgp_forward = 15.3
         
-        best = select_best_strategy(mgp_futures, mgp_put, mgp_forward)
+        best = select_best_strategy(mgp_futures, mgp_put, mgp_put_ladder, mgp_forward)
         assert best == "futures"  # максимальная цена
         
         # Тест с другим порядком
-        best2 = select_best_strategy(14.5, 15.8, 14.2)
+        best2 = select_best_strategy(14.5, 15.8, 15.7, 14.2)
         assert best2 == "put"
         
         # Тест с равными значениями (должен выбрать первую)
-        best3 = select_best_strategy(15.0, 15.0, 14.9)
+        best3 = select_best_strategy(15.0, 15.0, 14.9, 14.9)
         assert best3 in ["futures", "put"]  # любой из максимальных
     
     @patch('hedgefarm.pricing.futures.floor_price')
