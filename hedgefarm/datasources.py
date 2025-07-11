@@ -3,7 +3,7 @@
 import requests
 import numpy as np
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from .models import FuturesQuote, OptionQuote, MarketData
 from .utils import get_moex_token
 
@@ -15,22 +15,78 @@ class MOEXClient:
     
     def __init__(self):
         self.session = requests.Session()
-        # В продакшене здесь была бы аутентификация с токеном
+        # Добавляем токен для аутентификации если доступен
+        try:
+            token = get_moex_token()
+            self.session.headers.update({"Authorization": f"Bearer {token}"})
+        except ValueError:
+            # Работаем без токена для публичных данных
+            pass
         
     def get_last_price(self, symbol: str) -> float:
-        """Получает последнюю цену по символу."""
-        # Упрощенная реализация для демо
+        """Получает последнюю цену по символу через MOEX ISS API."""
         if symbol == "WHEAT":
-            # Имитация цены фьючерса на пшеницу
-            return 16500.0  # руб/тонна
-        elif symbol == "USD/RUB_TOM":
-            return 95.0  # курс USD/RUB
+            # Реальный запрос к MOEX ISS API для фьючерса WHEAT
+            url = f"{self.BASE_URL}/engines/futures/markets/forts/securities/{symbol}.json"
+            params = {
+                "iss.only": "marketdata",
+                "iss.meta": "off"
+            }
+            
+            try:
+                response = self.session.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                
+                if "marketdata" in data and data["marketdata"]["data"]:
+                    # Извлекаем последнюю цену из ответа MOEX
+                    marketdata = data["marketdata"]["data"][0]
+                    # Индекс для LAST (последняя цена) обычно 12 в MOEX API
+                    last_price = marketdata[12] if len(marketdata) > 12 and marketdata[12] else None
+                    
+                    if last_price:
+                        return float(last_price)
+                
+                # Fallback если не удалось получить реальные данные
+                print(f"Warning: Could not fetch real data for {symbol}, using fallback")
+                return 16500.0  # Fallback цена
+                
+            except (requests.RequestException, ValueError, KeyError, IndexError) as e:
+                print(f"Error fetching {symbol} price: {e}, using fallback")
+                return 16500.0  # Fallback цена
+                
+        elif symbol == "USD000UTSTOM" or symbol == "USD/RUB_TOM":
+            # Реальный запрос для курса USD/RUB
+            url = f"{self.BASE_URL}/engines/currency/markets/selt/securities/USD000UTSTOM.json"
+            params = {
+                "iss.only": "marketdata",
+                "iss.meta": "off"
+            }
+            
+            try:
+                response = self.session.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                
+                if "marketdata" in data and data["marketdata"]["data"]:
+                    marketdata = data["marketdata"]["data"][0]
+                    last_price = marketdata[12] if len(marketdata) > 12 and marketdata[12] else None
+                    
+                    if last_price:
+                        return float(last_price)
+                
+                # Fallback
+                print(f"Warning: Could not fetch real USD/RUB rate, using fallback")
+                return 95.0
+                
+            except (requests.RequestException, ValueError, KeyError, IndexError) as e:
+                print(f"Error fetching USD/RUB rate: {e}, using fallback")
+                return 95.0
         else:
             raise ValueError(f"Unknown symbol: {symbol}")
     
     def get_futures_quote(self, symbol: str = "WHEAT") -> FuturesQuote:
         """Получает котировку фьючерса."""
-        # В реальной реализации здесь был бы запрос к MOEX API
         price = self.get_last_price(symbol)
         
         return FuturesQuote(
@@ -75,6 +131,6 @@ class MOEXClient:
         return MarketData(
             futures_quote=self.get_futures_quote(symbol),
             put_options=self.get_option_chain(symbol, "P"),
-            usd_rate=self.get_last_price("USD/RUB_TOM"),
+            usd_rate=self.get_last_price("USD000UTSTOM"),
             volatility=self.get_historical_volatility(symbol)
         )
