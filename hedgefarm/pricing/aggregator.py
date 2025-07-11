@@ -33,11 +33,12 @@ def calculate_forward_price(futures_price: float, term_months: int) -> float:
     return rub_per_kg(floor_price_ton)
 
 
-def select_best_strategy(mgp_futures: float, mgp_put: float, mgp_forward: float) -> str:
+def select_best_strategy(mgp_futures: float, mgp_put: float, mgp_put_ladder: float, mgp_forward: float) -> str:
     """Выбирает наилучшую стратегию на основе максимального MGP."""
     strategies = {
         "futures": mgp_futures,
         "put": mgp_put,
+        "put_ladder": mgp_put_ladder,
         "forward": mgp_forward
     }
     
@@ -50,7 +51,7 @@ def apply_risk_surcharge(mgp: float, risk_surcharge: float) -> float:
     return mgp * (1 - risk_surcharge)
 
 
-def calculate_all_prices(market_data: MarketData, volume: int, term_months: int) -> QuoteOut:
+def calculate_all_prices(market_data: MarketData, volume: int, term_months: int, use_ladder: bool = True) -> QuoteOut:
     """
     Рассчитывает все варианты хеджирования и возвращает результат.
     
@@ -58,6 +59,7 @@ def calculate_all_prices(market_data: MarketData, volume: int, term_months: int)
         market_data: Рыночные данные
         volume: Объем в тоннах
         term_months: Срок в месяцах
+        use_ladder: Использовать ли лестничное хеджирование для опционов
     
     Returns:
         Результат расчета со всеми вариантами
@@ -72,10 +74,19 @@ def calculate_all_prices(market_data: MarketData, volume: int, term_months: int)
         term_months, 
         market_data.volatility
     )
+    
+    # Расчет лестничного хеджирования
+    mgp_put_ladder = options.ladder_floor_price(
+        market_data.put_options, 
+        futures_price, 
+        term_months, 
+        market_data.volatility
+    ) if use_ladder and len(market_data.put_options) >= 2 else mgp_put
+    
     mgp_forward = calculate_forward_price(futures_price, term_months)
     
-    # Выбор рекомендуемой стратегии
-    recommended = select_best_strategy(mgp_futures, mgp_put, mgp_forward)
+    # Выбор рекомендуемой стратегии (включая лестничное хеджирование)
+    recommended = select_best_strategy(mgp_futures, mgp_put, mgp_put_ladder, mgp_forward)
     
     # Создание результата
     result = QuoteOut(
@@ -83,7 +94,7 @@ def calculate_all_prices(market_data: MarketData, volume: int, term_months: int)
         volume_t=volume,
         term_m=term_months,
         floor_futures_rubkg=mgp_futures,
-        floor_put_rubkg=mgp_put,
+        floor_put_rubkg=mgp_put_ladder if use_ladder and recommended == "put_ladder" else mgp_put,
         floor_forward_rubkg=mgp_forward,
         recommended=recommended
     )
@@ -118,6 +129,11 @@ def get_detailed_comparison(market_data: MarketData, volume: int, term_months: i
         "futures": futures_metrics,
         "put_option": put_metrics,
         "forward": forward_metrics,
+        "comparison": {
+            "best_single_put": put_metrics["mgp_rub_kg"],
+            "best_ladder_put": put_metrics.get("mgp_ladder_rub_kg", put_metrics["mgp_rub_kg"]),
+            "ladder_improvement": put_metrics.get("mgp_ladder_rub_kg", put_metrics["mgp_rub_kg"]) - put_metrics["mgp_rub_kg"]
+        },
         "market_context": {
             "futures_price": futures_price,
             "volatility": market_data.volatility,
