@@ -2,9 +2,11 @@
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import logging
+import os
 
 from .models import QuoteOut, QuoteRequest
 from .datasources import MOEXClient
@@ -33,8 +35,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Подключение статических файлов
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # Клиент для получения данных с MOEX
 moex_client = MOEXClient()
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Возврат иконки сайта."""
+    favicon_path = os.path.join(os.path.dirname(__file__), "static", "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path)
+    else:
+        raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 @app.get("/", summary="Корневой эндпоинт")
