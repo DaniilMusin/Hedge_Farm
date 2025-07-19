@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from ..schemas.price import PriceRequest, PriceResponse
-from hedgefarm.pricing.aggregator import quote_all   # ← импорт из вашего репо
+from hedgefarm.pricing import quote_all   # ← импорт из вашего репо
 
 router = APIRouter(prefix="/api", tags=["Price"])
 
