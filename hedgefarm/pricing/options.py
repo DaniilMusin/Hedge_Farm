@@ -151,10 +151,10 @@ def ladder_floor_price(put_options: List[OptionQuote], futures_price: float,
     
     # Создаем лестницу страйков
     ladder = create_ladder_strikes(futures_price, put_options)
-    
+
     total_mgp = 0.0
     T = term_months / 12.0  # время до экспирации в годах
-    r = 0.15  # безрисковая ставка
+    r = cfg.get("risk_free_rate", 0.15)  # безрисковая ставка
     
     for option, weight in ladder:
         # Если премия из рынка отсутствует, рассчитываем по Black-Scholes
@@ -202,7 +202,7 @@ def floor_price(put_options: List[OptionQuote], futures_price: float,
     # Премия может быть 0 для far-OTM опционов - это валидно
     if optimal_put.premium is None or optimal_put.premium < 0 or optimal_put.implied_vol is None:
         T = term_months / 12.0  # время до экспирации в годах
-        r = 0.15  # безрисковая ставка (ключевая ставка ЦБ)
+        r = cfg.get("risk_free_rate", 0.15)  # безрисковая ставка (ключевая ставка ЦБ)
 
         premium = black_scholes_put(
             S=futures_price,
@@ -240,10 +240,10 @@ def get_put_metrics(put_options: List[OptionQuote], futures_price: float,
     optimal_put = select_optimal_strike(futures_price, put_options)
     mgp_single = floor_price(put_options, futures_price, term_months, volatility)
     mgp_ladder = ladder_floor_price(put_options, futures_price, term_months, volatility)
-    
+
     # Расчет дельты для PUT (приблизительно)
     T = term_months / 12.0
-    r = 0.15
+    r = cfg.get("risk_free_rate", 0.15)
     d1 = (math.log(futures_price / optimal_put.strike) + (r + 0.5 * volatility ** 2) * T) / (volatility * math.sqrt(T))
     put_delta = stats.norm.cdf(d1) - 1  # дельта PUT всегда отрицательная
     

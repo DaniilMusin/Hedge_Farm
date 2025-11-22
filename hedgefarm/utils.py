@@ -2,8 +2,11 @@
 
 import yaml
 import os
+import logging
 from pathlib import Path
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 def get_default_config() -> Dict[str, Any]:
@@ -17,6 +20,7 @@ def get_default_config() -> Dict[str, Any]:
         "basis_discount": 1600,
         "forward_delta_pct": 0.015,
         "go_pct": 0.10,
+        "exchange_fee_rate": 0.00013,  # 0.013% биржевая комиссия
         "risk": {
             "capital_reserve": 50000000,
             "alpha_capital": 0.1
@@ -27,23 +31,27 @@ def get_default_config() -> Dict[str, Any]:
 def load_cfg() -> Dict[str, Any]:
     """Загружает конфигурацию из settings.yaml с fallback на default."""
     config_path = Path(__file__).parent.parent / "config" / "settings.yaml"
-    
+
     try:
         if not config_path.exists():
-            print(f"Warning: Configuration file not found: {config_path}, using defaults")
+            logger.warning(f"Configuration file not found: {config_path}, using defaults")
             return get_default_config()
-        
+
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
-            
+
         if not config:
-            print("Warning: Empty configuration file, using defaults")
+            logger.warning("Empty configuration file, using defaults")
             return get_default_config()
-            
-        return config
-        
+
+        # Merge with defaults to ensure all required keys exist
+        defaults = get_default_config()
+        merged_config = {**defaults, **config}
+        logger.info(f"Configuration loaded from {config_path}")
+        return merged_config
+
     except (yaml.YAMLError, OSError, IOError) as e:
-        print(f"Warning: Error loading configuration file: {e}, using defaults")
+        logger.error(f"Error loading configuration file: {e}, using defaults")
         return get_default_config()
 
 

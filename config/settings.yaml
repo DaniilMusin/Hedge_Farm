@@ -1,11 +1,39 @@
 
+# Комиссии платформы (в долях от цены)
 fee_pct:
   futures: 0.008
   put: 0.010
   forward: 0.012
-basis_discount: 1600           # rub / t
+
+# Базисная скидка (руб/тонна)
+basis_discount: 1600
+
+# Дельта для форварда (в долях)
 forward_delta_pct: 0.015
+
+# Процент гарантийного обеспечения
 go_pct: 0.10
+
+# Биржевая комиссия MOEX (0.013%)
+exchange_fee_rate: 0.00013
+
+# Безрисковая ставка для опционов (годовая)
+risk_free_rate: 0.15
+
+# Оценки волатильности для различных культур
+volatility_estimates:
+  WHEAT: 0.28
+  CORN: 0.30
+  SOYBEANS: 0.25
+  default: 0.25
+
+# Маппинг полей MOEX API
+moex_fields:
+  LAST: 12      # Последняя цена
+  BID: 7        # Лучшая цена покупки
+  OFFER: 8      # Лучшая цена продажи
+
+# Параметры риск-менеджмента
 risk:
   capital_reserve: 50000000
   alpha_capital: 0.1

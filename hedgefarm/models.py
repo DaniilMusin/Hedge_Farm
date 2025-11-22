@@ -2,7 +2,12 @@
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def utc_now() -> datetime:
+    """Helper function to get current UTC time (replaces deprecated datetime.utcnow)."""
+    return datetime.now(timezone.utc)
 
 
 class QuoteRequest(BaseModel):
@@ -21,7 +26,7 @@ class QuoteOut(BaseModel):
     floor_put_rubkg: float = Field(description="Цена пола при хедже PUT опционом, руб/кг")
     floor_forward_rubkg: float = Field(description="Цена пола при форвардном хедже, руб/кг")
     recommended: Literal["futures", "put", "put_ladder", "forward"] = Field(description="Рекомендуемый инструмент")
-    calculated_at: datetime = Field(default_factory=datetime.utcnow, description="Время расчета")
+    calculated_at: datetime = Field(default_factory=utc_now, description="Время расчета")
 
 
 class FuturesQuote(BaseModel):
