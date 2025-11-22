@@ -11,22 +11,46 @@ from ..utils import load_cfg, rub_per_kg
 def black_scholes_put(S: float, K: float, T: float, r: float, sigma: float) -> float:
     """
     Вычисляет цену PUT опциона по модели Блэка-Шоулза.
-    
+
     Args:
         S: Цена базового актива (фьючерс)
         K: Страйк цена
         T: Время до экспирации в годах
         r: Безрисковая ставка
         sigma: Волатильность
-    
+
     Returns:
         Цена PUT опциона
+
+    Raises:
+        ValueError: Если входные параметры некорректны
     """
-    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
-    d2 = d1 - sigma * math.sqrt(T)
-    
-    put_price = K * math.exp(-r * T) * stats.norm.cdf(-d2) - S * stats.norm.cdf(-d1)
-    return max(put_price, 0)  # цена не может быть отрицательной
+    # Валидация входных параметров
+    if S <= 0:
+        raise ValueError(f"Underlying price S must be positive, got {S}")
+    if K <= 0:
+        raise ValueError(f"Strike price K must be positive, got {K}")
+    if T <= 0:
+        raise ValueError(f"Time to expiration T must be positive, got {T}")
+    if sigma <= 0:
+        raise ValueError(f"Volatility sigma must be positive, got {sigma}")
+    if r < 0:
+        raise ValueError(f"Risk-free rate r must be non-negative, got {r}")
+
+    # Проверка на экстремальные значения
+    if T > 10:  # Более 10 лет - подозрительно
+        raise ValueError(f"Time to expiration T seems too large: {T} years")
+    if sigma > 2.0:  # Волатильность > 200% - подозрительно
+        raise ValueError(f"Volatility sigma seems too large: {sigma}")
+
+    try:
+        d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * math.sqrt(T))
+        d2 = d1 - sigma * math.sqrt(T)
+
+        put_price = K * math.exp(-r * T) * stats.norm.cdf(-d2) - S * stats.norm.cdf(-d1)
+        return max(put_price, 0)  # цена не может быть отрицательной
+    except (ValueError, ZeroDivisionError) as e:
+        raise ValueError(f"Black-Scholes calculation failed: {e}")
 
 
 def select_optimal_strike(futures_price: float, put_options: List[OptionQuote]) -> OptionQuote:
@@ -134,7 +158,8 @@ def ladder_floor_price(put_options: List[OptionQuote], futures_price: float,
     
     for option, weight in ladder:
         # Если премия из рынка отсутствует, рассчитываем по Black-Scholes
-        if option.premium <= 0 or option.implied_vol is None:
+        # Премия может быть 0 для far-OTM опционов - это валидно
+        if option.premium is None or option.premium < 0 or option.implied_vol is None:
             premium = black_scholes_put(
                 S=futures_price,
                 K=option.strike,
@@ -144,9 +169,9 @@ def ladder_floor_price(put_options: List[OptionQuote], futures_price: float,
             )
         else:
             premium = option.premium
-        
-        # Комиссия платформы для этого опциона
-        platform_fee = option.strike * fee_pct
+
+        # Комиссия платформы рассчитывается от премии, а не от страйка
+        platform_fee = premium * fee_pct
         
         # Цена пола в руб/тонна для этого опциона
         option_floor_price_ton = option.strike - premium - basis_discount - platform_fee
@@ -174,10 +199,11 @@ def floor_price(put_options: List[OptionQuote], futures_price: float,
     optimal_put = select_optimal_strike(futures_price, put_options)
     
     # Если премия из рынка отсутствует, рассчитываем по Black-Scholes
-    if optimal_put.premium <= 0 or optimal_put.implied_vol is None:
+    # Премия может быть 0 для far-OTM опционов - это валидно
+    if optimal_put.premium is None or optimal_put.premium < 0 or optimal_put.implied_vol is None:
         T = term_months / 12.0  # время до экспирации в годах
         r = 0.15  # безрисковая ставка (ключевая ставка ЦБ)
-        
+
         premium = black_scholes_put(
             S=futures_price,
             K=optimal_put.strike,
@@ -187,9 +213,9 @@ def floor_price(put_options: List[OptionQuote], futures_price: float,
         )
     else:
         premium = optimal_put.premium
-    
-    # Комиссия платформы
-    platform_fee = optimal_put.strike * fee_pct
+
+    # Комиссия платформы рассчитывается от премии, а не от страйка
+    platform_fee = premium * fee_pct
     
     # Цена пола в руб/тонна
     floor_price_ton = optimal_put.strike - premium - basis_discount - platform_fee
